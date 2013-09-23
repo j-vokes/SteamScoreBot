@@ -63,7 +63,7 @@ def main():
         submissionBody = createInitialTable(True)
 
         #Use the "for in generator" method we've used previously
-        for position, score in enumerate((scores for scores in orderedScores if (abs(scores.date - comppost.date) < timedelta(days=7))), start=1):
+        for position, score in enumerate((scores for scores in orderedScores if ((scores.date - comppost.date) < timedelta(days=7) and (scores.date - comppost.date) >= timedelta(0))), start=1):
             if position <= 25:
                 submissionBody += createScoreLine(score, position, True)
             else:
