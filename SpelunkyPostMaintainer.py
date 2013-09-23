@@ -40,7 +40,7 @@ def main():
         orderedScores = sortScores(scores, config['Sort']['type'])
                 
         #Update Main post
-        submissionBody = str(config['Post Details']['bodytext']).replace("\\n","\n")
+        submissionBody = str(config['Daily Post']['bodytext']).replace("\\n","\n")
         submissionBody += createLine()
         submissionBody += createSubmissionTemplate()
         submissionBody += createLine()
@@ -60,7 +60,8 @@ def main():
         
         submission = r.get_submission(submission_id=comppost.postid)
         #Update Main post
-        submissionBody = createInitialTable(True)
+        submissionBody = str(config['Weekly Post']['bodytext']).replace("\\n","\n")
+        submissionBody += createInitialTable(True)
 
         #Use the "for in generator" method we've used previously
         for position, score in enumerate((scores for scores in orderedScores if ((scores.date - comppost.date) < timedelta(days=7) and (scores.date - comppost.date) >= timedelta(0))), start=1):
