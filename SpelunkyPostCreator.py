@@ -69,7 +69,7 @@ for post in postdata:
         exists = True
 #Create new weekly post and catch any timeout exceptions
 #TODO: Update to make more generic. Monthly, Fortnightly etc.
-if today.weekday() == 1 and not exists:
+if today.weekday() == 0 and not exists:
     for attempt in range(30):
         try:
             submission = r.submit(config['Subreddit']['name'], config['Weekly Post']['title'] + " - " + today.strftime(config['Weekly Post']['dateformat']), text = str(config['Weekly Post']['bodytext']).replace("\\n","\n"))
