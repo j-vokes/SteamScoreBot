@@ -1,5 +1,6 @@
 #Creates a new daily post.
 import praw
+import time
 import configparser
 import sys
 from SpelunkyTypes import SpelunkyScore, SpelunkyPost
@@ -18,7 +19,7 @@ r.login(config['User']['username'], config['User']['password'])
 #Get saved posts
 with open(config['Subreddit']['postdata'], "rb") as f:
     postdata = pickle.load(f)
-    
+
 poststodelete = set()
 #First clean up old complilation posts
 for comppost in (scoreposts for scoreposts in postdata if scoreposts.type==2):
@@ -49,13 +50,13 @@ for post in postdata:
     if post.date == today and post.type == 0:
         exists = True
 
-
 #Create new daily post and catch any timeout exceptions
 if not exists:
-    for attempt in range(3):
+    for attempt in range(30):
         try:
-            submission = r.submit(config['Subreddit']['name'], config['Post Details']['title'] + " - " + today.strftime(config['Post Details']['dateformat']), text = str(config['Post Details']['bodytext']).replace("\\n","\n"))
+            submission = r.submit(config['Subreddit']['name'], config['Daily Post']['title'] + " - " + today.strftime(config['Daily Post']['dateformat']), text = str(config['Daily Post']['bodytext']).replace("\\n","\n"))
         except:
+            time.sleep(60)
             continue
         #Add post to postdata
         postdata.add(SpelunkyPost(submission.id, today, 0))
@@ -68,15 +69,19 @@ for post in postdata:
         exists = True
 #Create new weekly post and catch any timeout exceptions
 #TODO: Update to make more generic. Monthly, Fortnightly etc.
-if today.weekday() == 0 and not exists:
-    for attempt in range(3):
+if today.weekday() == 1 and not exists:
+    for attempt in range(30):
         try:
-            submission = r.submit(config['Subreddit']['name'], config['Post Details']['title'] + " - " + today.strftime(config['Post Details']['dateformat']), text = str(config['Post Details']['bodytext']).replace("\\n","\n"))
+            submission = r.submit(config['Subreddit']['name'], config['Weekly Post']['title'] + " - " + today.strftime(config['Weekly Post']['dateformat']), text = str(config['Weekly Post']['bodytext']).replace("\\n","\n"))
         except:
+            time.sleep(60)
             continue
         #Add post to postdata
         postdata.add(SpelunkyPost(submission.id, today, 2))
         break
+
+for post in postdata:
+    print(post.date ,post.postid ,post.type )
 
 #Save our updated post data
 with open(config['Subreddit']['postdata'], 'wb') as f:

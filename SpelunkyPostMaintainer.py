@@ -52,6 +52,18 @@ def main():
         if submission.selftext.replace("amp;","") != submissionBody:
             submission.edit(submissionBody)
 
+    #We'll go through any posts that were created by other people (we're not the author) that we want to track
+    for post in (scoreposts for scoreposts in postdata if scoreposts.type==1):        
+        print("Post ID:",post.postid,"Date:",post.date,"Type:",post.type)
+        submission = r.get_submission(submission_id=post.postid)
+    
+        scores = getScores(submission, bannedUsers)
+        scores = SteamScore.populateScores(scores, post.date)
+        #Keep track of all scores
+        for score in scores: totalScores.append(score)
+                
+        #Can's update Main post
+
     #Now that we've updated all the dailes and have a list of the scores they contain we'll update the compilation posts
     for comppost in (scoreposts for scoreposts in postdata if scoreposts.type==2):
         print("Post ID:",comppost.postid,"Date:",comppost.date,"Type:",comppost.type)
