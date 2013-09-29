@@ -1,6 +1,6 @@
 #Maintains Posts
 import praw
-from SpelunkyTypes import SpelunkyScore, SpelunkyPost
+from SpelunkyTypes import SpelunkyScore, SpelunkyPost, SpelunkyUser
 import configparser
 import sys
 import re
@@ -27,15 +27,30 @@ def main():
 
     #Keep track of every score we read.        
     totalScores = []
+    #Keep track of users' steam names and IDs so we don't have to search each time if a user submits scores over multiple days
+    trackedusers = dict()
     #We'll go through all the dailies and collect all the scores and the dates they were from
     for post in (scoreposts for scoreposts in postdata if scoreposts.type==0):        
         print("Post ID:",post.postid,"Date:",post.date,"Type:",post.type)
         submission = r.get_submission(submission_id=post.postid)
     
         scores = getScores(submission, bannedUsers)
+
+        #Fill out scores with extra info from our tracked users
+        for score in scores:
+            if trackedusers.get(score.user):
+                score.steamid = trackedusers.get(score.user).steamid
+                score.steamname = trackedusers.get(score.user).steamname
+
         scores = SteamScore.populateScores(scores, post.date)
         #Keep track of all scores
         for score in scores: totalScores.append(score)
+
+        #Add users to our tracked users
+        for score in scores:
+            if score.user not in trackedusers:
+                if score.steamname and score.steamid:
+                    trackedusers[score.user] = SpelunkyUser(score.steamname,score.steamid)
         
         orderedScores = sortScores(scores, config['Sort']['type'])
                 
@@ -43,6 +58,11 @@ def main():
         submissionBody = str(config['Daily Post']['bodytext']).replace("\\n","\n")
         submissionBody += createLine()
         submissionBody += createSubmissionTemplate()
+        submissionBody += createLine()
+        for comppost in postdata:
+            timediff = post.date - comppost.date 
+            if comppost.type==2 and timediff > timedelta(0) and timediff < timedelta(days = 7):
+                submissionBody += "[Weekly Post!](http://www.reddit.com/r/"+config['Subreddit']['name']+"/comments/"+comppost.postid+"/)"+"\n\n"
         submissionBody += createLine()
         submissionBody += createInitialTable(False)
 
@@ -56,13 +76,26 @@ def main():
     for post in (scoreposts for scoreposts in postdata if scoreposts.type==1):        
         print("Post ID:",post.postid,"Date:",post.date,"Type:",post.type)
         submission = r.get_submission(submission_id=post.postid)
-    
+
         scores = getScores(submission, bannedUsers)
+
+        #Fill out scores with extra info from our tracked users
+        for score in scores:
+            if trackedusers.get(score.user):
+                score.steamid = trackedusers.get(score.user).steamid
+                score.steamname = trackedusers.get(score.user).steamname
+
         scores = SteamScore.populateScores(scores, post.date)
         #Keep track of all scores
         for score in scores: totalScores.append(score)
+
+        #Add users to our tracked users
+        for score in scores:
+            if score.user not in trackedusers:
+                if score.steamname and score.steamid:
+                    trackedusers[score.user] = SpelunkyUser(score.steamname,score.steamid)
                 
-        #Can's update Main post
+        #Can't update Main post
 
     #Now that we've updated all the dailes and have a list of the scores they contain we'll update the compilation posts
     for comppost in (scoreposts for scoreposts in postdata if scoreposts.type==2):
@@ -73,6 +106,7 @@ def main():
         submission = r.get_submission(submission_id=comppost.postid)
         #Update Main post
         submissionBody = str(config['Weekly Post']['bodytext']).replace("\\n","\n")
+        submissionBody += createLine()
         submissionBody += createInitialTable(True)
 
         #Use the "for in generator" method we've used previously
@@ -92,7 +126,7 @@ def getScores(submission, bannedUsers):
     #Get Scores from comments - Make sure it's a top comment too
     for comment in (topcomments for topcomments in flat_comments if topcomments.is_root):
         #User
-        user = comment.author
+        user = comment.author.name
         if str(user) in bannedUsers:
             continue
         elif str(user) in authors:
@@ -103,31 +137,31 @@ def getScores(submission, bannedUsers):
 
         #Steam Name
         steamName = ""
-        steamprofilelink = ""
+        steamid = ""
       
-        #First search for the 17 digit Steam64ID
+        #First search for the 17 digit SteamID
         try:
-            steam64ID = re.search(r'\d{17}', comment.body).group(0)
+            steam17ID = re.search(r'\d{17}', comment.body).group(0)
         except:
-            steam64ID = ""
+            steam17ID = ""
          #Search for the STEAM_X:Y:Z version    
         try:
             steamIDText = re.search(r'\d\:[0|1]\:\d*', comment.body).group(0)
         except:
             steamIDText = ""
-        if steam64ID:
-            steamprofilelink = "http://steamcommunity.com/profiles/"+steam64ID
+        if steam17ID:
+            steamid = steam17ID
         elif steamIDText:
-            steamprofilelink = "http://steamcommunity.com/profiles/" + str(get64ID(steamIDText))
+            steamid = str(get64ID(steamIDText))
         
-        if not steamprofilelink:
+        if not steamid:
             #Get the right line
             correctLine = re.search(r'(?i)Steam .*:.*', comment.body)
             if correctLine:
                 #Get Steam Name               
                 steamName = correctLine.group(0).split(':')[1].strip()
             else:    
-                steamName = user.name
+                steamName = user
                 
         #Permalink
         permalink = comment.permalink
@@ -148,7 +182,7 @@ def getScores(submission, bannedUsers):
                 link = result.group(0).replace("amp;","")
                                 
 
-        x = SpelunkyScore(user, steamName, permalink, link, steamprofilelink)
+        x = SpelunkyScore(user, steamName, permalink, link, steamid)
         scores.append(x)
     return scores
 

@@ -21,10 +21,12 @@ def populateScores(scores, date):
     leaderboardTree = getXML(correctBoard)
     root = leaderboardTree.getroot()
     for i, score in enumerate(scores):
+        #If we already have their steam name and steam ID we can just move on
+        if score.steamname and score.steamid:
+            pass
         #If the SteamID was given then let's get their "Steam Name"
-        if score.steamprofilelink:
-            steamID = re.search(r'\d{17}', score.steamprofilelink).group(0)
-            steamPageTree = getXML(score.steamprofilelink+'?xml=1')
+        elif score.steamid:
+            steamPageTree = getXML('http://steamcommunity.com/id/'+score.steamid+'?xml=1')
             try:
                 score.steamname = steamPageTree.find('steamID').text
             except:
@@ -34,15 +36,15 @@ def populateScores(scores, date):
             steamName = score.steamname
             steamPageTree = getXML('http://steamcommunity.com/id/'+steamName+'?xml=1')
             try:
-                steamID = steamPageTree.find('steamID64').text
+                score.steamid = steamPageTree.find('steamID64').text
             except:
                 continue
         #From the leaderboard start filling in scores.
         for entry in root.find("entries"):
-            if steamID in entry.find('steamid').text:
+            if score.steamid in entry.find('steamid').text:
                 score.score = int(entry.find('score').text)
                 score.level = getLevel(entry.find('details').text)
-                score.steamprofilelink = "http://steamcommunity.com/profiles/"+steamID
+                score.steamprofilelink = "http://steamcommunity.com/profiles/"+score.steamid
                 score.date = date
                 score.valid = True
                 break
