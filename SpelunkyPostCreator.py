@@ -28,7 +28,7 @@ poststodelete = set()
 for comppost in (scoreposts for scoreposts in postdata if scoreposts.type==2):
     if abs(comppost.date - today) > timedelta(days = int(config['Subreddit']['compdaysavailable'])):
         submission = r.get_submission(submission_id=comppost.postid)
-        submission.delete()
+        #submission.delete()
         poststodelete.add(comppost)
 
 #Then clean up old dailes                
