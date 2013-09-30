@@ -61,7 +61,7 @@ def main():
         submissionBody += createLine()
         for comppost in postdata:
             timediff = post.date - comppost.date 
-            if comppost.type==2 and timediff > timedelta(0) and timediff < timedelta(days = 7):
+            if comppost.type==2 and timediff >= timedelta(0) and timediff < timedelta(days = 7):
                 submissionBody += "[Weekly Post!](http://www.reddit.com/r/"+config['Subreddit']['name']+"/comments/"+comppost.postid+"/)"+"\n\n"
         submissionBody += createLine()
         submissionBody += createInitialTable(False)
@@ -101,7 +101,8 @@ def main():
     for comppost in (scoreposts for scoreposts in postdata if scoreposts.type==2):
         print("Post ID:",comppost.postid,"Date:",comppost.date,"Type:",comppost.type)
         #Now update leaderboard post
-        orderedScores = sortScores(totalScores, config['Sort']['type'])
+        totalcopy = totalScores[:]
+        orderedScores = sortScores(totalcopy, config['Sort']['type'])
         
         submission = r.get_submission(submission_id=comppost.postid)
         #Update Main post
@@ -156,7 +157,7 @@ def getScores(submission, bannedUsers):
         
         if not steamid:
             #Get the right line
-            correctLine = re.search(r'(?i)Steam .*:.*', comment.body)
+            correctLine = re.search(r'(?i)Steam .*?: *[^\. \n]*', comment.body)
             if correctLine:
                 #Get Steam Name               
                 steamName = correctLine.group(0).split(':')[1].strip()

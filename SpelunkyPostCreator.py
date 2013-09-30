@@ -17,8 +17,11 @@ r.login(config['User']['username'], config['User']['password'])
 #If this throws an exception (e.g. timout) there's no real point carrying on. Just wait for the script to be called again.
 
 #Get saved posts
-with open(config['Subreddit']['postdata'], "rb") as f:
-    postdata = pickle.load(f)
+try:
+    with open(config['Subreddit']['postdata'], "rb") as f:
+        postdata = pickle.load(f)
+except:
+    postdata = set()
 
 poststodelete = set()
 #First clean up old complilation posts
