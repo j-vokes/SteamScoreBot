@@ -54,7 +54,6 @@ def populateScores(scores, date):
 def getXML(page):
     for attempt in range(3):
         try:
-            print(page)
             returnpage = ET.parse(urllib.request.urlopen(page, timeout=5))
         except socket.timeout:
             #print("Timed out!", attempt)

@@ -69,6 +69,7 @@ def main():
         for position, score in enumerate(orderedScores, start=1):
             submissionBody += createScoreLine(score, position, False)
 
+        submissionBody += createAuthorString()
         if submission.selftext.replace("amp;","") != submissionBody:
             submission.edit(submissionBody)
 
@@ -117,6 +118,7 @@ def main():
             else:
                 break
 
+        submissionBody += createAuthorString()
         if submission.selftext.replace("amp;","") != submissionBody:
             submission.edit(submissionBody)
 
@@ -127,7 +129,10 @@ def getScores(submission, bannedUsers):
     #Get Scores from comments - Make sure it's a top comment too
     for comment in (topcomments for topcomments in flat_comments if topcomments.is_root):
         #User
-        user = comment.author.name
+        try: #So PRAW tries to read deleted comments then freaks out when there's nothing to be read...
+            user = comment.author.name
+        except:
+            continue #If I can't even read the username then forget that post and move on!
         if str(user) in bannedUsers:
             continue
         elif str(user) in authors:
@@ -184,6 +189,16 @@ def getScores(submission, bannedUsers):
                                 
 
         x = SpelunkyScore(user, steamName, permalink, link, steamid)
+
+        #Prune the comment text for the hover function 
+        x.commentText = comment.body
+        x.commentText = x.commentText.replace("amp;","")
+        x.commentText = x.commentText.replace("\"","\'") #Replace any double quotes with single quotes.
+        x.commentText = re.sub(r"Link:.*?http(|s)://[^ )\]\n]*","",x.commentText) #Drop the Link
+        x.commentText = re.sub(r"(?i)Steam .*?: *[^\. \n]*","",x.commentText) #Drop the "Steam Name:" bit
+        x.commentText = re.sub(r"\n+","  ",x.commentText) #Remove any newlines as this screws with the table markup
+        x.commentText = x.commentText.strip()
+        x.commentText = cap(x.commentText,250)
         scores.append(x)
     return scores
 
@@ -250,7 +265,7 @@ def createScoreLine(score, position, includedate):
         resultString += str(score.user)+"|"         
     resultString += str(score.level) +"|"
     resultString += "$" + str(score.score) +"|"
-    resultString += "[Comment](" + str(score.permalink) +") |"
+    resultString += "[Comment](" + str(score.permalink) +" \""+ score.commentText+"\"" +") |"
     if(score.link):
         resultString += "[Link](" + str(score.link) +")"+"|"
     else:
@@ -271,7 +286,7 @@ def createInitialTable(includedate):
 
 def createAuthorString():
     resultString  = createLine()
-    resultString  = "    Please excuse any of SpelunkyBot's apparent issues. He's young. He doesn't underdstand everything yet"
+    resultString  += "^[SpelunkyBot](http://www.reddit.com/user/SpelunkyBot) ^was ^created ^by ^[Avagad](http://www.reddit.com/user/Avagad). ^Any ^questions, ^complaints, ^or ^requests ^should ^be ^directed ^[here](http://www.reddit.com/message/compose/?to=Avagad&subject=SpelunkyBot)"
     return resultString
 
 def createLine():
@@ -289,5 +304,9 @@ def get64ID(id):
     y = int(splitup[1])
     z = int(splitup[2])
     return z*2+v+y
+
+def cap(s, l):
+    return s if len(s)<=l else s[0:l-3]+'...'
+
 if __name__ == "__main__":
     main()

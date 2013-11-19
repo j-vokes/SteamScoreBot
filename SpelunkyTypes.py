@@ -16,6 +16,7 @@ class SpelunkyScore:
       self.steamid = steamid
       self.date = datetime.today()
       self.valid = False
+      self.commentText = ""
 
 class SpelunkyPost:
     def __init__(self, postid, date, type):
