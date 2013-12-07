@@ -133,6 +133,7 @@ def getScores(submission, bannedUsers):
             user = comment.author.name
         except:
             continue #If I can't even read the username then forget that post and move on!
+
         if str(user) in bannedUsers:
             continue
         elif str(user) in authors:
@@ -147,7 +148,9 @@ def getScores(submission, bannedUsers):
       
         #First search for the 17 digit SteamID
         try:
-            steam17ID = re.search(r'\d{17}', comment.body).group(0)
+            correctArea = re.search(r'[ :/\n]+\d{17}[ /\n]+', comment.body).group(0)
+            if correctArea:
+                steam17ID = re.search(r'\d{17}', correctArea).group(0)
         except:
             steam17ID = ""
          #Search for the STEAM_X:Y:Z version    
@@ -188,11 +191,13 @@ def getScores(submission, bannedUsers):
                 link = result.group(0).replace("amp;","")
                                 
 
+        print(user, steamName, steamid) 
         x = SpelunkyScore(user, steamName, permalink, link, steamid)
 
         #Prune the comment text for the hover function 
         x.commentText = comment.body
         x.commentText = x.commentText.replace("amp;","")
+        x.commentText = x.commentText.replace("|","/") #Who would put Pipes in their comments? People trying to break my code! Replace them!
         x.commentText = x.commentText.replace("\"","\'") #Replace any double quotes with single quotes.
         x.commentText = re.sub(r"Link:.*?http(|s)://[^ )\]\n]*","",x.commentText) #Drop the Link
         x.commentText = re.sub(r"(?i)Steam .*?: *[^\. \n]*","",x.commentText) #Drop the "Steam Name:" bit
