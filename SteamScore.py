@@ -26,7 +26,7 @@ def populateScores(scores, date):
             pass
         #If the SteamID was given then let's get their "Steam Name"
         elif score.steamid:
-            steamPageTree = getXML('http://steamcommunity.com/id/'+score.steamid+'?xml=1')
+            steamPageTree = getXML('http://steamcommunity.com/profiles/'+score.steamid+'?xml=1')
             try:
                 score.steamname = steamPageTree.find('steamID').text
             except:
@@ -52,20 +52,24 @@ def populateScores(scores, date):
     return scores
 
 def getXML(page):
-    for attempt in range(3):
+    for attempt in range(5):
         try:
-            returnpage = ET.parse(urllib.request.urlopen(page, timeout=5))
+            returnpage = ET.parse(urllib.request.urlopen(page, timeout=10))
         except socket.timeout:
-            #print("Timed out!", attempt)
+            print("Timed out!", attempt, page)
             continue
-        except ElementTree.ParseError:
+        except urllib.error.URLError:
+            print("Timed out!", attempt, page)
+            continue
+        except ET.ParseError:
             return ""
         except Exception as inst:
             print(page)
             print(type(inst))     #Default catch. Print it to track in the future.
         break
     else:
-        raise NameError('Page timed out too many times. Try again later :(')
+        print('Page timed out too many times.')
+        return ""
     return returnpage
 
 def getLevel(details):
