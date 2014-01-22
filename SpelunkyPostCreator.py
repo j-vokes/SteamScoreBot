@@ -38,6 +38,11 @@ for dailypost in (scoreposts for scoreposts in postdata if scoreposts.type==0):
         submission.delete()
         poststodelete.add(dailypost)
 
+for dailypost in (scoreposts for scoreposts in postdata if scoreposts.type==1):
+    if abs(dailypost.date - today) > timedelta(days = int(config['Subreddit']['dailydaysavailable'])):
+        poststodelete.add(dailypost)
+
+
 #Then check if any posts have been deleted through reddit
 for post in postdata:
     submission = r.get_submission(submission_id=post.postid)

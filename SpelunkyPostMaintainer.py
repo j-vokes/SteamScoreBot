@@ -162,8 +162,15 @@ def getScores(submission, bannedUsers):
             steamid = steam17ID
         elif steamIDText:
             steamid = str(get64ID(steamIDText))
-        
+
+        #People like to link their entire profile instead of just stating their SteamName.
+        #Who am I to stop them?
         if not steamid:
+            search = re.search(r'(?i)(?<=steamcommunity.com/id/)[^\. /\n]*', comment.body)
+            if search:
+                steamName = search.group(0)
+
+        if not steamid and not steamName:
             #Get the right line
             correctLine = re.search(r'(?i)Steam .*?: *[^\. \n]*', comment.body)
             if correctLine:
@@ -183,7 +190,7 @@ def getScores(submission, bannedUsers):
         #Get Link
             result = re.search(r'(?i)http(|s)://[^ )\]\n]*', correctLine.group(0))
             if result:
-                link = result.group(0)
+                link = result.group(0).replace("amp;","")
         #Just take the first link we find.
         else:
             result = re.search(r'(?i)http(|s)://[^ )\]\n]*', comment.body)
