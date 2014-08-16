@@ -3,7 +3,7 @@ import praw
 import time
 import configparser
 import sys
-from SpelunkyTypes import SpelunkyScore, SpelunkyPost
+from ScoreBotTypes import SteamUserScore, SteamScorePost
 import pickle
 from datetime import date, timedelta
 
@@ -67,7 +67,7 @@ if not exists:
             time.sleep(60)
             continue
         #Add post to postdata
-        postdata.add(SpelunkyPost(submission.id, today, 0))
+        postdata.add(SteamScorePost(submission.id, today, 0))
         break
 
 #Check whether a post has already been made today
@@ -85,7 +85,7 @@ if today.weekday() == 0 and not exists:
             time.sleep(60)
             continue
         #Add post to postdata
-        postdata.add(SpelunkyPost(submission.id, today, 2))
+        postdata.add(SteamScorePost(submission.id, today, 2))
         break
 
 for post in postdata:

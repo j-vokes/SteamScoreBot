@@ -1,29 +1,26 @@
 import xml.etree.ElementTree as ET
 import urllib.request
 import urllib.error
-import SpelunkyTypes
 import math
-import re
-from datetime import date
 import socket
 
 
 def populateScores(scores, date):
     #Get the root Spelunky leaderboard page
-    directoryTree = getXML('http://steamcommunity.com/stats/239350/leaderboards/?xml=1')
+    directoryTree = getXML('http://steamcommunity.com/stats/247080/leaderboards/?xml=1')
     root = directoryTree.getroot()
     #Find the link to today's leaderboard
     for leaderboard in root.findall("leaderboard"):
-        if date.strftime("%m/%d/%Y") in leaderboard.find('name').text:
+        if '{d.day}/{d.month}/{d.year}'.format(d=date) in leaderboard.find('name').text:
             correctBoard = leaderboard.find('url').text
             break
             
     leaderboardTree = getXML(correctBoard)
     root = leaderboardTree.getroot()
-    for i, score in enumerate(scores):
+    for score in scores:
         #If we already have their steam name and steam ID we can just move on
         if score.steamname and score.steamid:
-            pass
+            continue
         #If the SteamID was given then let's get their "Steam Name"
         elif score.steamid:
             steamPageTree = getXML('http://steamcommunity.com/profiles/'+score.steamid+'?xml=1')
@@ -39,17 +36,25 @@ def populateScores(scores, date):
                 score.steamid = steamPageTree.find('steamID64').text
             except:
                 continue
-        #From the leaderboard start filling in scores.
-        for entry in root.find("entries"):
+
+    resultscores = [];
+    #From the leaderboard start filling in scores.
+    for entry in root.find("entries"):
+        for i, score in enumerate(scores):
+            if score.steamid is "":
+                continue
             if score.steamid in entry.find('steamid').text:
                 score.score = int(entry.find('score').text)
                 score.level = getLevel(entry.find('details').text)
                 score.steamprofilelink = "http://steamcommunity.com/profiles/"+score.steamid
                 score.date = date
                 score.valid = True
+                score.rank = int(entry.find('rank').text)
+                resultscores.append(score)
+                del scores[i]
                 break
 
-    return scores
+    return resultscores
 
 def getXML(page):
     for attempt in range(5):
@@ -74,14 +79,8 @@ def getXML(page):
 
 def getLevel(details):
     for i, num in enumerate(details):
-        if i == 8:
-            part1 = num
+        if i == 1:
+            world = num
         if i == 9:
-            part2 = num
-
-    rawLevel = int(part1+part2, 16)
-    world = int(math.ceil(rawLevel / 4))
-    stage = int(rawLevel % 4)
-    if stage == 0:
-        stage=4
+            stage = num
     return str(world)+"-"+str(stage)

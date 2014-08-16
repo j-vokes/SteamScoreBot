@@ -1,12 +1,12 @@
 #Maintains Posts
 import praw
-from SpelunkyTypes import SpelunkyScore, SpelunkyPost, SpelunkyUser
+from ScoreBotTypes import SteamUserScore, SteamScorePost, SteamUser
 import configparser
 import sys
 import re
 import SteamScore
 import pickle
-from datetime import date, timedelta
+from datetime import timedelta
 
 def main():
     #Read Config file
@@ -18,7 +18,7 @@ def main():
         bannedUsers = f.readlines()
 
     #Login
-    r = praw.Reddit('Spelunky Daily Submission Maintainer by u/Avagad')
+    r = praw.Reddit('Steam Score Leaderboard Maintainer by u/Avagad')
     r.login(config['User']['username'], config['User']['password'])
 
     #Get saved posts
@@ -31,7 +31,7 @@ def main():
     trackedusers = dict()
     #We'll go through all the dailies and collect all the scores and the dates they were from
     for post in (scoreposts for scoreposts in postdata if scoreposts.type==0):        
-        print("Post ID:",post.postid,"Date:",post.date,"Type:",post.type)
+        print("---","Post ID:",post.postid,"Date:",post.date,"Type:",post.type,"---")
         submission = r.get_submission(submission_id=post.postid)
     
         scores = getScores(submission, bannedUsers)
@@ -50,14 +50,12 @@ def main():
         for score in scores:
             if score.user not in trackedusers:
                 if score.steamname and score.steamid:
-                    trackedusers[score.user] = SpelunkyUser(score.steamname,score.steamid)
+                    trackedusers[score.user] = SteamUser(score.steamname,score.steamid)
         
         orderedScores = sortScores(scores, config['Sort']['type'])
                 
         #Update Main post
         submissionBody = str(config['Daily Post']['bodytext']).replace("\\n","\n")
-        submissionBody += createLine()
-        submissionBody += createSubmissionTemplate()
         submissionBody += createLine()
         for comppost in postdata:
             timediff = post.date - comppost.date 
@@ -69,13 +67,13 @@ def main():
         for position, score in enumerate(orderedScores, start=1):
             submissionBody += createScoreLine(score, position, False)
 
-        submissionBody += createAuthorString()
+        submissionBody += createAuthorString(config['User']['username'])
         if submission.selftext.replace("amp;","") != submissionBody:
             submission.edit(submissionBody)
 
     #We'll go through any posts that were created by other people (we're not the author) that we want to track
     for post in (scoreposts for scoreposts in postdata if scoreposts.type==1):        
-        print("Post ID:",post.postid,"Date:",post.date,"Type:",post.type)
+        print("---","Post ID:",post.postid,"Date:",post.date,"Type:",post.type,"---")
         submission = r.get_submission(submission_id=post.postid)
 
         scores = getScores(submission, bannedUsers)
@@ -94,13 +92,13 @@ def main():
         for score in scores:
             if score.user not in trackedusers:
                 if score.steamname and score.steamid:
-                    trackedusers[score.user] = SpelunkyUser(score.steamname,score.steamid)
+                    trackedusers[score.user] = SteamUser(score.steamname,score.steamid)
                 
         #Can't update Main post
 
     #Now that we've updated all the dailes and have a list of the scores they contain we'll update the compilation posts
     for comppost in (scoreposts for scoreposts in postdata if scoreposts.type==2):
-        print("Post ID:",comppost.postid,"Date:",comppost.date,"Type:",comppost.type)
+        print("---","Post ID:",post.postid,"Date:",post.date,"Type:",post.type,"---")
         #Now update leaderboard post
         totalcopy = totalScores[:]
         orderedScores = sortScores(totalcopy, config['Sort']['type'])
@@ -118,14 +116,13 @@ def main():
             else:
                 break
 
-        submissionBody += createAuthorString()
+        submissionBody += createAuthorString(config['User']['username'])
         if submission.selftext.replace("amp;","") != submissionBody:
             submission.edit(submissionBody)
 
 def getScores(submission, bannedUsers):
     flat_comments = praw.helpers.flatten_tree(submission.comments)
     scores = []
-    authors = set()
     #Get Scores from comments - Make sure it's a top comment too
     for comment in (topcomments for topcomments in flat_comments if topcomments.is_root):
         #User
@@ -136,10 +133,6 @@ def getScores(submission, bannedUsers):
 
         if str(user) in bannedUsers:
             continue
-        elif str(user) in authors:
-            continue
-        else:
-            authors.add(str(user))
             
 
         #Steam Name
@@ -148,7 +141,7 @@ def getScores(submission, bannedUsers):
       
         #First search for the 17 digit SteamID
         try:
-            correctArea = re.search(r'[ :/\n]+\d{17}[ /\n]+', comment.body).group(0)
+            correctArea = re.search(r'[ :/\n]*\d{17}[ /\n]+', comment.body).group(0)
             if correctArea:
                 steam17ID = re.search(r'\d{17}', correctArea).group(0)
         except:
@@ -199,7 +192,7 @@ def getScores(submission, bannedUsers):
                                 
 
         print(user, steamName, steamid) 
-        x = SpelunkyScore(user, steamName, permalink, link, steamid)
+        x = SteamUserScore(user, steamName, permalink, link, steamid)
 
         #Prune the comment text for the hover function 
         x.commentText = comment.body
@@ -267,15 +260,26 @@ def sortScores(scores, sortType):
          
     return orderedScores
 
-def createScoreLine(score, position, includedate):
+def createScoreLine(score, position, compilationPost):
     resultString = ""
-    resultString += str(position)+"|"
-    if includedate: resultString += str(score.date.strftime("%Y-%m-%d"))+"|"
+    if not compilationPost:
+        resultString += str(position)+" ("+str(score.rank)+")"+"|"
+    else:
+        resultString += str(position)+"|"
+
+    if compilationPost:
+        resultString += str(score.date.strftime("%Y-%m-%d"))+"|"
+
     if str(score.user) != str(score.steamname):
         resultString += str(score.user)+" ("+score.steamname+")"+"|"
     else:
-        resultString += str(score.user)+"|"         
-    resultString += str(score.level) +"|"
+        resultString += str(score.user)+"|"
+
+    if str(score.level) == '3-5':
+        resultString += "Win!" +"|"
+    else:
+        resultString += str(score.level) +"|"
+
     resultString += "$" + str(score.score) +"|"
     resultString += "[Comment](" + str(score.permalink) +" \""+ score.commentText+"\"" +") |"
     if(score.link):
@@ -283,22 +287,22 @@ def createScoreLine(score, position, includedate):
     else:
         resultString += "None" +"|"
     resultString += "[Profile](" + str(score.steamprofilelink) +")"+"\n"
-    print(score.user, score.score, score.level)
+    print(score.user, score.steamname, score.steamid, score.score, score.level)
     return resultString
 
-def createInitialTable(includedate):
-    if includedate:
-        resultString = "\\*\\*\\*|Date|User|Level|Score|Comment|Video/Image Link|Steam Profile\n"
+def createInitialTable(compilationPost):
+    if compilationPost:
+        resultString = "Rank|Date|User|Level|Score|Comment|Video/Image Link|Steam Profile\n"
         resultString += ":--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:\n"
         return resultString
     else:
-        resultString = "\\*\\*\\*|User|Level|Score|Comment|Video/Image Link|Steam Profile\n"
+        resultString = "Rank (Global)|User|Level|Score|Comment|Video/Image Link|Steam Profile\n"
         resultString += ":--:|:--:|:--:|:--:|:--:|:--:|:--:\n"
         return resultString
 
-def createAuthorString():
+def createAuthorString(name):
     resultString  = createLine()
-    resultString  += "^[SpelunkyBot](http://www.reddit.com/user/SpelunkyBot) ^was ^created ^by ^[Avagad](http://www.reddit.com/user/Avagad). ^Any ^questions, ^complaints, ^or ^requests ^should ^be ^directed ^[here](http://www.reddit.com/message/compose/?to=Avagad&subject=SpelunkyBot)"
+    resultString  += "^["+name+"](http://www.reddit.com/user/"+name+") ^was ^created ^by ^[Avagad](http://www.reddit.com/user/Avagad). ^Any ^questions, ^complaints, ^or ^requests ^should ^be ^directed ^[here](http://www.reddit.com/message/compose/?to=Avagad&subject=SpelunkyBot)"
     return resultString
 
 def createLine():
