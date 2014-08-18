@@ -63,9 +63,15 @@ if not exists:
     for attempt in range(30):
         try:
             submission = r.submit(config['Subreddit']['name'], config['Daily Post']['title'] + " - " + today.strftime(config['Daily Post']['dateformat']), text = str(config['Daily Post']['bodytext']).replace("\\n","\n"))
-        except:
+        except Exception as inst:
+            print(type(inst))     #Default catch. Print it to track in the future.
             time.sleep(60)
             continue
+        if config.getboolean('Subreddit','stickydaily'):
+            try:
+                submission.sticky()
+            except praw.errors.ModeratorOrScopeRequired:
+                pass #Not a moderator. TODO: Check for moderator status.
         #Add post to postdata
         postdata.add(SteamScorePost(submission.id, today, 0))
         break
@@ -81,9 +87,15 @@ if today.weekday() == 0 and not exists:
     for attempt in range(30):
         try:
             submission = r.submit(config['Subreddit']['name'], config['Weekly Post']['title'] + " - " + today.strftime(config['Weekly Post']['dateformat']), text = str(config['Weekly Post']['bodytext']).replace("\\n","\n"))
-        except:
+        except Exception as inst:
+            print(type(inst))     #Default catch. Print it to track in the future.
             time.sleep(60)
             continue
+        if config.getboolean('Subreddit','stickycomp'):
+            try:
+                submission.sticky()
+            except praw.errors.ModeratorOrScopeRequired:
+                pass #Not a moderator. TODO: Check for moderator status.
         #Add post to postdata
         postdata.add(SteamScorePost(submission.id, today, 2))
         break
