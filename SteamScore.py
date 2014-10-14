@@ -11,7 +11,7 @@ def populateScores(scores, date):
     root = directoryTree.getroot()
     #Find the link to today's leaderboard
     for leaderboard in root.findall("leaderboard"):
-        if '{d.day}/{d.month}/{d.year}'.format(d=date) in leaderboard.find('name').text:
+        if '{d.day}/{d.month}/{d.year}'.format(d=date) == leaderboard.find('name').text:
             correctBoard = leaderboard.find('url').text
             break
             
@@ -42,6 +42,7 @@ def populateScores(scores, date):
     for entry in root.find("entries"):
         for i, score in enumerate(scores):
             if score.steamid is "":
+                del scores[i]
                 continue
             if score.steamid in entry.find('steamid').text:
                 score.score = int(entry.find('score').text)

@@ -204,6 +204,7 @@ def getScores(submission, bannedUsers):
         x.commentText = re.sub(r"\n+","  ",x.commentText) #Remove any newlines as this screws with the table markup
         x.commentText = x.commentText.strip()
         x.commentText = cap(x.commentText,250)
+        x.commentText = x.commentText + " " #Just incase someone ends their comment with a backslash (escape)
         scores.append(x)
     return scores
 
@@ -302,7 +303,7 @@ def createInitialTable(compilationPost):
 
 def createAuthorString(name):
     resultString  = createLine()
-    resultString  += "^["+name+"](http://www.reddit.com/user/"+name+") ^was ^created ^by ^[Avagad](http://www.reddit.com/user/Avagad). ^Any ^questions, ^complaints, ^or ^requests ^should ^be ^directed ^[here](http://www.reddit.com/message/compose/?to=Avagad&subject=SpelunkyBot)"
+    resultString  += "^["+name+"](http://www.reddit.com/user/"+name+") ^was ^created ^by ^[Avagad](http://www.reddit.com/user/Avagad). ^Any ^questions, ^complaints, ^or ^requests ^should ^be ^directed ^[here](http://www.reddit.com/message/compose/?to=Avagad&subject="+name+")"
     return resultString
 
 def createLine():
