@@ -3,15 +3,18 @@ import urllib.request
 import urllib.error
 import math
 import socket
-
+import datetime
 
 def populateScores(scores, date):
     #Get the root Spelunky leaderboard page
     directoryTree = getXML('http://steamcommunity.com/stats/247080/leaderboards/?xml=1')
     root = directoryTree.getroot()
     #Find the link to today's leaderboard
+    releaseText = ""
+    if date >= datetime.date(2015,4,24): #Post release of the game the developer used the naming convention DD/M/YYYY_PROD for daily leaderboard names.
+        releaseText = "_PROD"
     for leaderboard in root.findall("leaderboard"):
-        if '{d.day}/{d.month}/{d.year}'.format(d=date) == leaderboard.find('name').text:
+        if '{d.day}/{d.month}/{d.year}'.format(d=date)+releaseText == leaderboard.find('name').text:
             correctBoard = leaderboard.find('url').text
             break
             

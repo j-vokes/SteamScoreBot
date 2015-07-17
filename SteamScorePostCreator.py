@@ -3,6 +3,7 @@ import praw
 import time
 import configparser
 import sys
+from OAuth2PrawLogin import redditlogin
 from ScoreBotTypes import SteamUserScore, SteamScorePost
 import pickle
 from datetime import date, timedelta
@@ -12,8 +13,12 @@ config.read(sys.argv[1])
 
 today = date.today()
 
-r = praw.Reddit('Spelunky Daily Submission Maintainer by u/Avagad')
-r.login(config['User']['username'], config['User']['password'])
+#Yesterday's postID used to unsticky posts.
+yesterdayID = 0
+
+#Login
+r = praw.Reddit('Steam Score Leaderboard Maintainer by u/Avagad')
+redditlogin(r, config['User']['clientid'], config['User']['secretkey'], config['User']['username'], config['User']['password'])
 #If this throws an exception (e.g. timout) there's no real point carrying on. Just wait for the script to be called again.
 
 #Get saved posts
@@ -37,6 +42,10 @@ for dailypost in (scoreposts for scoreposts in postdata if scoreposts.type==0):
         submission = r.get_submission(submission_id=dailypost.postid)
         submission.delete()
         poststodelete.add(dailypost)
+
+    #Get Yesterday's ID in case we need to unsticky later
+    if dailypost.date == (today - timedelta(days = 1)):
+        yesterdayID = dailypost.postid
 
 for dailypost in (scoreposts for scoreposts in postdata if scoreposts.type==1):
     if abs(dailypost.date - today) > timedelta(days = int(config['Subreddit']['dailydaysavailable'])):
@@ -62,12 +71,15 @@ for post in postdata:
 if not exists:
     for attempt in range(30):
         try:
-            submission = r.submit(config['Subreddit']['name'], config['Daily Post']['title'] + " - " + today.strftime(config['Daily Post']['dateformat']), text = str(config['Daily Post']['bodytext']).replace("\\n","\n"))
+            submission = r.submit(config['Subreddit']['name'], config['Daily Post']['title'] + " - " + today.strftime(config['Daily Post']['dateformat']), text = str(config['Daily Post']['bodytext']).replace("\\n","\n"),  send_replies=False)
         except Exception as inst:
             print(type(inst))     #Default catch. Print it to track in the future.
             time.sleep(60)
             continue
         if config.getboolean('Subreddit','stickydaily'):
+            if yesterdayID != 0:
+                yestPost = r.get_submission(submission_id=yesterdayID)
+                yestPost.unsticky()
             try:
                 submission.sticky()
             except praw.errors.ModeratorOrScopeRequired:
@@ -86,7 +98,7 @@ for post in postdata:
 if today.weekday() == 0 and not exists:
     for attempt in range(30):
         try:
-            submission = r.submit(config['Subreddit']['name'], config['Weekly Post']['title'] + " - " + today.strftime(config['Weekly Post']['dateformat']), text = str(config['Weekly Post']['bodytext']).replace("\\n","\n"))
+            submission = r.submit(config['Subreddit']['name'], config['Weekly Post']['title'] + " - " + today.strftime(config['Weekly Post']['dateformat']), text = str(config['Weekly Post']['bodytext']).replace("\\n","\n"),  send_replies=False)
         except Exception as inst:
             print(type(inst))     #Default catch. Print it to track in the future.
             time.sleep(60)

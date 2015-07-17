@@ -1,5 +1,6 @@
 #Maintains Posts
 import praw
+from OAuth2PrawLogin import redditlogin
 from ScoreBotTypes import SteamUserScore, SteamScorePost, SteamUser
 import configparser
 import sys
@@ -19,7 +20,7 @@ def main():
 
     #Login
     r = praw.Reddit('Steam Score Leaderboard Maintainer by u/Avagad')
-    r.login(config['User']['username'], config['User']['password'])
+    redditlogin(r, config['User']['clientid'], config['User']['secretkey'], config['User']['username'], config['User']['password'])
 
     #Get saved posts
     with open(config['Subreddit']['postdata'], "rb") as f:
@@ -276,7 +277,7 @@ def createScoreLine(score, position, compilationPost):
     else:
         resultString += str(score.user)+"|"
 
-    if str(score.level) == '3-5':
+    if str(score.level) == '4-6':
         resultString += "Win!" +"|"
     else:
         resultString += str(score.level) +"|"
